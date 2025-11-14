@@ -1,53 +1,56 @@
-// src/components/PopularCategories.tsx
-import OptimizedImage from './OptimizedImage'
-
-type PopularCategory = {
-  id: string
-  nome: string
-  popular?: boolean
-  imagePath?: string
+interface CategoryItem {
+  name: string
+  image: string
 }
 
 interface PopularCategoriesProps {
-  categories: PopularCategory[]
   onSelectCategory: (category: string) => void
+  categories?: CategoryItem[] // opcional
 }
 
-export default function PopularCategories({ categories, onSelectCategory }: PopularCategoriesProps) {
-  const popular = categories
-    .filter((cat) => cat.popular)
-    .slice(0, 4)
+const defaultCategories: CategoryItem[] = [
+  { name: 'Garrafas', image: '/assets/images/categorias/garrafas.jpg' },
+  { name: 'Chaveiros', image: '/assets/images/categorias/chaveiros.jpg' },
+  { name: 'Bonés', image: '/assets/images/categorias/bones.jpg' },
+  { name: 'Canetas', image: '/assets/images/categorias/canetas.jpg' },
+]
 
-  if (!popular.length) return null
+export default function PopularCategories({
+  onSelectCategory,
+  categories,
+}: PopularCategoriesProps) {
+  // se não vier nada por props, usa as categorias padrão
+  const items = categories && categories.length > 0 ? categories : defaultCategories
+
+  if (!items.length) return null
 
   return (
-    <section className="mb-8 md:mb-12">
-      <div className="flex items-center justify-between mb-4 md:mb-6">
-        <h2 className="text-2xl md:text-3xl font-title font-bold text-text-primary">
-          Categorias em destaque
-        </h2>
-      </div>
+    <section className="mb-12">
+      <h2 className="text-2xl md:text-3xl font-title font-bold text-text-primary mb-6">
+        Categorias mais procuradas
+      </h2>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        {popular.map((cat) => (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {items.map((cat) => (
           <button
-            key={cat.id}
-            onClick={() => onSelectCategory(cat.nome)}
+            key={cat.name}
+            onClick={() => onSelectCategory(cat.name)}
             className="relative h-28 md:h-32 rounded-xl overflow-hidden group bg-gray-100 text-left"
+            type="button"
           >
-            {cat.imagePath && (
-              <OptimizedImage
-                src={cat.imagePath}
-                alt={cat.nome}
-                width={400}
-                quality={75}
-                className="brightness-90 group-hover:brightness-100 transition-all object-cover"
-              />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-            <h3 className="absolute bottom-3 left-3 right-3 text-white font-title font-bold text-sm md:text-base">
-              {cat.nome}
-            </h3>
+            <img
+              src={cat.image}
+              alt={cat.name}
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
+
+            <span className="relative z-10 text-white font-semibold text-sm md:text-base px-3 py-2 block">
+              {cat.name}
+            </span>
           </button>
         ))}
       </div>

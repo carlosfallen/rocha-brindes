@@ -1,22 +1,25 @@
-// src/components/ProductGrid.tsx
 import ProductCard from './ProductCard'
 import type { Product } from '@/types/product'
 
-interface Props {
+interface ProductGridProps {
   products: Product[]
-  onViewDetails: (p: Product) => void
-  onAddToCart: (p: Product) => void
+  onViewDetails: (product: Product) => void
+  onAddToCart: (product: Product) => void
 }
 
-export default function ProductGrid({ products, onViewDetails, onAddToCart }: Props) {
+export default function ProductGrid({
+  products,
+  onViewDetails,
+  onAddToCart,
+}: ProductGridProps) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-      {products.map((p) => (
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {products.map((product) => (
         <ProductCard
-          key={p.id}
-          product={p}
-          onViewDetails={() => onViewDetails(p)}
-          onAddToCart={() => onAddToCart(p)}
+          key={product.id}
+          product={product}
+          onViewDetails={() => onViewDetails(product)}
+          onAddToCart={() => onAddToCart(product)}
         />
       ))}
     </div>

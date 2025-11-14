@@ -1,6 +1,6 @@
-// src/pages/Home.tsx
 import { useState, useMemo, lazy, Suspense } from 'react'
-import { useHomeData } from '@/hooks/useHomeData'
+import { useProducts } from '@/hooks/useProducts'
+import { useCategories } from '@/hooks/useCategories'
 import { useProductStore } from '@/store/useProductStore'
 import Header from '@/components/Header'
 import type { Product } from '@/types/product'
@@ -8,18 +8,21 @@ import type { Product } from '@/types/product'
 const HeroBanner = lazy(() => import('@/components/HeroBanner'))
 const PopularCategories = lazy(() => import('@/components/PopularCategories'))
 const CategorySidebar = lazy(() => import('@/components/CategorySidebar'))
-const VirtualProductGrid = lazy(() => import('@/components/VirtualProductGrid'))
+const ProductGrid = lazy(() => import('@/components/ProductGrid'))
 const ProductModal = lazy(() => import('@/components/ProductModal'))
 const CartSidebar = lazy(() => import('@/components/CartSidebar'))
 
 export default function Home() {
-  const { selectedCategory, setSelectedCategory, searchTerm, setSearchTerm, addToCart } =
-    useProductStore()
+  const {
+    selectedCategory,
+    setSelectedCategory,
+    searchTerm,
+    setSearchTerm,
+    addToCart,
+  } = useProductStore()
 
-  const { data, isLoading } = useHomeData()
-  const products = data?.products ?? []
-  const categories = data?.categories ?? []
-
+  const { data: products = [], isLoading } = useProducts()
+  const { data: categories = [] } = useCategories()
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
 
   const filteredProducts = useMemo(() => {
@@ -57,12 +60,9 @@ export default function Home() {
             <HeroBanner />
           </Suspense>
 
-          {/* Categorias populares lazy, sem hits no Firestore */}
+          {/* Categorias populares lazy (seu componente atual, sem mudar props) */}
           <Suspense fallback={null}>
-            <PopularCategories
-              categories={categories}
-              onSelectCategory={setSelectedCategory}
-            />
+            <PopularCategories onSelectCategory={setSelectedCategory} />
           </Suspense>
 
           <div className="grid lg:grid-cols-[280px_1fr] gap-8">
@@ -86,7 +86,7 @@ export default function Home() {
                 </div>
               ) : (
                 <Suspense fallback={skeletonGrid}>
-                  <VirtualProductGrid
+                  <ProductGrid
                     products={filteredProducts}
                     onViewDetails={setSelectedProduct}
                     onAddToCart={addToCart}
