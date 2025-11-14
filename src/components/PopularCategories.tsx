@@ -1,8 +1,7 @@
 // src/components/PopularCategories.tsx
-import { useEffect, useMemo, useState } from 'react'
-import { onSnapshot, collection, query, where, limit } from 'firebase/firestore'
-import { getDownloadURL, ref } from 'firebase/storage'
-import { db, storage } from '@/lib/firebase'
+import { useEffect, useState } from 'react'
+import { collection, query, where, limit, getDocs } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 
 interface PopularCategoriesProps {
   onSelectCategory: (category: string) => void
@@ -15,66 +14,29 @@ type Cat = {
   imagePath?: string
 }
 
-type Item = {
-  name: string
-  image: string
-}
-
 export default function PopularCategories({ onSelectCategory }: PopularCategoriesProps) {
-  const [cats, setCats] = useState<Cat[]>([])
-  const [urls, setUrls] = useState<Record<string, string>>({})
+  const [categories, setCategories] = useState<Cat[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const q = query(collection(db, 'categorias'), where('popular', '==', true), limit(4))
-    const unsub = onSnapshot(q, async (snap) => {
-      const data: Cat[] = snap.docs.map((d) => d.data() as Cat)
-      setCats(data)
-    })
-    return () => unsub()
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    async function run() {
-      setLoading(true)
-      const out: Record<string, string> = {}
-      for (const c of cats) {
-        if (c.imagePath && c.imagePath.trim().length > 0) {
-          try {
-            const fileRef = ref(storage, `Category/${c.imagePath}`)
-            const url = await getDownloadURL(fileRef)
-            out[c.id] = url
-          } catch {
-            out[c.id] = ''
-          }
-        } else {
-          out[c.id] = ''
-        }
-      }
-      if (!cancelled) {
-        setUrls(out)
+    const loadCategories = async () => {
+      try {
+        const q = query(
+          collection(db, 'categorias'),
+          where('popular', '==', true),
+          limit(4)
+        )
+        const snapshot = await getDocs(q)
+        const data = snapshot.docs.map(doc => doc.data() as Cat)
+        setCategories(data.filter(c => c.imagePath))
+      } catch (error) {
+        console.error('Erro ao carregar categorias populares:', error)
+      } finally {
         setLoading(false)
       }
     }
-    if (cats.length) run()
-    else setLoading(false)
-    return () => {
-      cancelled = true
-    }
-  }, [cats])
-
-  const items: Item[] = useMemo(
-    () =>
-      cats
-        .slice(0, 4)
-        .map((c) => ({
-          name: c.nome,
-          image: urls[c.id] || '',
-        }))
-        .filter((i) => i.name && i.image),
-    [cats, urls]
-  )
+    loadCategories()
+  }, [])
 
   if (loading) {
     return (
@@ -91,7 +53,7 @@ export default function PopularCategories({ onSelectCategory }: PopularCategorie
     )
   }
 
-  if (!items.length) return null
+  if (!categories.length) return null
 
   return (
     <section className="mb-12">
@@ -99,21 +61,21 @@ export default function PopularCategories({ onSelectCategory }: PopularCategorie
         Categorias mais procuradas
       </h2>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {items.map((cat) => (
+        {categories.map((cat) => (
           <button
-            key={cat.name}
-            onClick={() => onSelectCategory(cat.name)}
+            key={cat.id}
+            onClick={() => onSelectCategory(cat.nome)}
             className="group relative aspect-square rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all hover:scale-105"
           >
             <img
-              src={cat.image}
-              alt={cat.name}
+              src={cat.imagePath}
+              alt={cat.nome}
               loading="lazy"
               className="w-full h-full object-cover brightness-90 group-hover:brightness-100 transition-all"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
             <h3 className="absolute bottom-4 left-4 right-4 text-white font-title font-bold text-xl">
-              {cat.name}
+              {cat.nome}
             </h3>
           </button>
         ))}

@@ -3,20 +3,41 @@ import { useQuery } from '@tanstack/react-query'
 import { ref, listAll, getDownloadURL } from 'firebase/storage'
 import { storage } from '@/lib/firebase'
 
-async function fetchStorageFiles(path: string) {
-  const folder = path.endsWith('/') ? path : `${path}/`
-  const folderRef = ref(storage, folder)
-  const res = await listAll(folderRef)
-  const items = [...res.items].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true }))
-  const urls = await Promise.all(items.map((it) => getDownloadURL(it)))
-  return urls
+interface UseStorageFilesOptions {
+  paginated?: boolean
+  pageSize?: number
 }
 
-export function useStorageFiles(path: string) {
-  return useQuery<string[]>({
-    queryKey: ['storage-files', path],
-    queryFn: () => fetchStorageFiles(path),
-    staleTime: 10 * 60 * 1000,
-    gcTime: 60 * 60 * 1000,
+interface StorageFile {
+  name: string
+  fullPath: string
+  url: string
+}
+
+export function useStorageFiles(prefix: string, options?: UseStorageFilesOptions) {
+  return useQuery<StorageFile[] | string[]>({
+    queryKey: ['storage-files', prefix, options?.paginated, options?.pageSize],
+    queryFn: async () => {
+      const folderRef = ref(storage, prefix)
+      const result = await listAll(folderRef)
+      
+      const files = await Promise.all(
+        result.items.map(async (item) => {
+          const url = await getDownloadURL(item)
+          return {
+            name: item.name,
+            fullPath: item.fullPath,
+            url
+          }
+        })
+      )
+
+      if (options?.paginated) {
+        return files.slice(0, options.pageSize || 100)
+      }
+
+      return files.map(f => f.url)
+    },
+    staleTime: 10 * 60 * 1000
   })
 }

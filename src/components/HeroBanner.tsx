@@ -1,10 +1,28 @@
 // src/components/HeroBanner.tsx
 import { useEffect, useState } from 'react'
-import { useStorageFiles } from '@/hooks/useStorageFiles'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 
 export default function HeroBanner() {
-  const { data: banners = [], isLoading } = useStorageFiles('Banner')
+  const [banners, setBanners] = useState<string[]>([])
   const [current, setCurrent] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const loadBanners = async () => {
+      try {
+        const docSnap = await getDoc(doc(db, 'config', 'layout'))
+        if (docSnap.exists() && docSnap.data().banners) {
+          setBanners(docSnap.data().banners)
+        }
+      } catch (error) {
+        console.error('Erro ao carregar banners:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadBanners()
+  }, [])
 
   useEffect(() => {
     if (!banners.length) return

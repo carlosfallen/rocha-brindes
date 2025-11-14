@@ -3,22 +3,31 @@ import { useParams, Link } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useQuery } from '@tanstack/react-query'
-import type { Product } from '@/types/product'
+import type { Product, ProductVariation } from '@/types/product'
 import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 
 export default function ProductPage() {
   const { id } = useParams()
   const [currentImage, setCurrentImage] = useState(0)
+  const [selectedColor, setSelectedColor] = useState<string>('')
 
-  const { data: product, isLoading } = useQuery<Product>(
-    ['product', id],
-    async () => {
+  const { data: product, isLoading } = useQuery<Product>({
+    queryKey: ['product', id],
+    queryFn: async () => {
       const docSnap = await getDoc(doc(db, 'produtos', id!))
       if (!docSnap.exists()) throw new Error('Produto não encontrado')
       return { id: docSnap.id, ...docSnap.data() } as Product
     }
-  )
+  })
+
+  const handleColorSelect = (variation: ProductVariation) => {
+    setSelectedColor(variation.cor)
+    const varIndex = product?.imagens_urls.indexOf(variation.imagem_url)
+    if (varIndex !== undefined && varIndex !== -1) {
+      setCurrentImage(varIndex)
+    }
+  }
 
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">Carregando...</div>
@@ -100,10 +109,18 @@ export default function ProductPage() {
                 <div className="mb-6">
                   <h2 className="font-semibold text-lg mb-2">Cores disponíveis</h2>
                   <div className="flex flex-wrap gap-2">
-                    {product.variacoes.map((v) => (
-                      <span key={v} className="border-2 border-gray-300 px-4 py-2 rounded-full text-sm hover:border-primary">
-                        {v}
-                      </span>
+                    {product.variacoes.map((v, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleColorSelect(v)}
+                        className={`border-2 px-4 py-2 rounded-full text-sm transition-all ${
+                          selectedColor === v.cor
+                            ? 'border-primary bg-primary text-white'
+                            : 'border-gray-300 hover:border-primary'
+                        }`}
+                      >
+                        {v.cor}
+                      </button>
                     ))}
                   </div>
                 </div>

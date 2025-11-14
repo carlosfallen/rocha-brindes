@@ -8,7 +8,15 @@ const Home = lazy(() => import('./pages/Home'))
 const Admin = lazy(() => import('./pages/Admin'))
 const ProductPage = lazy(() => import('@/pages/ProductPage'))
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 60_000,
+    },
+  },
+})
 
 function App() {
   return (

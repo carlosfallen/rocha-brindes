@@ -1,5 +1,5 @@
 // src/components/ProductModal.tsx
-import type { Product } from '@/types/product'
+import type { Product, ProductVariation } from '@/types/product'
 import { X } from 'lucide-react'
 import { useState } from 'react'
 
@@ -10,6 +10,15 @@ interface ProductModalProps {
 
 export default function ProductModal({ product, onClose }: ProductModalProps) {
   const [currentImage, setCurrentImage] = useState(0)
+  const [selectedColor, setSelectedColor] = useState<string>('')
+
+  const handleColorSelect = (variation: ProductVariation, index: number) => {
+    setSelectedColor(variation.cor)
+    const varIndex = product.imagens_urls.indexOf(variation.imagem_url)
+    if (varIndex !== -1) {
+      setCurrentImage(varIndex)
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -32,12 +41,12 @@ export default function ProductModal({ product, onClose }: ProductModalProps) {
                 />
               </div>
               {product.imagens_urls && product.imagens_urls.length > 1 && (
-                <div className="flex gap-2">
+                <div className="flex gap-2 overflow-x-auto">
                   {product.imagens_urls.map((url, i) => (
                     <button
                       key={i}
                       onClick={() => setCurrentImage(i)}
-                      className={`w-20 h-20 rounded-lg overflow-hidden border-2 ${
+                      className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
                         i === currentImage ? 'border-primary' : 'border-gray-200'
                       }`}
                     >
@@ -71,10 +80,18 @@ export default function ProductModal({ product, onClose }: ProductModalProps) {
                 <div className="mb-4">
                   <h3 className="font-semibold mb-2">Cores disponíveis</h3>
                   <div className="flex flex-wrap gap-2">
-                    {product.variacoes.map((v) => (
-                      <span key={v} className="border border-gray-300 px-3 py-1 rounded-full text-sm">
-                        {v}
-                      </span>
+                    {product.variacoes.map((v, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleColorSelect(v, i)}
+                        className={`border-2 px-4 py-2 rounded-full text-sm transition-all ${
+                          selectedColor === v.cor
+                            ? 'border-primary bg-primary text-white'
+                            : 'border-gray-300 hover:border-primary'
+                        }`}
+                      >
+                        {v.cor}
+                      </button>
                     ))}
                   </div>
                 </div>

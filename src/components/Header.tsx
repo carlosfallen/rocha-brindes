@@ -1,20 +1,34 @@
-// src/components/Header.tsx  (busca logo em /Logo)
+// src/components/Header.tsx
 import { ShoppingCart } from 'lucide-react'
 import { useProductStore } from '@/store/useProductStore'
-import { useStorageFiles } from '@/hooks/useStorageFiles'
-import { useMemo } from 'react'
+import { useEffect, useState } from 'react'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 
 export default function Header() {
   const { cartCount, toggleCart } = useProductStore()
-  const { data: logos = [] } = useStorageFiles('Logo') // <- pasta do Storage
-  const logoSrc = useMemo(() => logos[0] ?? '/assets/images/logo-rocha-brindes.png', [logos])
+  const [logoUrl, setLogoUrl] = useState('/assets/images/logo-rocha-brindes.png')
+
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const docSnap = await getDoc(doc(db, 'config', 'layout'))
+        if (docSnap.exists() && docSnap.data().logo) {
+          setLogoUrl(docSnap.data().logo)
+        }
+      } catch (error) {
+        console.error('Erro ao carregar logo:', error)
+      }
+    }
+    loadLogo()
+  }, [])
 
   return (
     <header className="sticky top-0 z-40 bg-white shadow-sm">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <img
-            src={logoSrc}
+            src={logoUrl}
             alt="Rocha Brindes"
             className="h-12 md:h-16 w-auto"
           />

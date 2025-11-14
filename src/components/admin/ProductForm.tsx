@@ -4,7 +4,9 @@ import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { db, storage } from '@/lib/firebase'
 import { useCategories } from '@/hooks/useCategories'
-import ImageSelector from './ImageSelector'
+import { uploadOptimizedImage } from '@/utils/imageOptimizer'
+import { X, Upload } from 'lucide-react'
+import type { ProductVariation } from '@/types/product'
 
 export default function ProductForm() {
   const [nome, setNome] = useState('')
@@ -12,57 +14,111 @@ export default function ProductForm() {
   const [descricao, setDescricao] = useState('')
   const [destaque, setDestaque] = useState(false)
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
-  const [variacoes, setVariacoes] = useState<string[]>([])
-  const [currentVariacao, setCurrentVariacao] = useState('')
 
-  // imagens
-  const [uploadFiles, setUploadFiles] = useState<File[]>([])
-  const [chosenUrls, setChosenUrls] = useState<string[]>([])
-  const [subfolder, setSubfolder] = useState('') // sincronizado manualmente (ver abaixo)
+  const [mainImage, setMainImage] = useState<File | null>(null)
+  const [mainImagePreview, setMainImagePreview] = useState<string>('')
+
+  const [variations, setVariations] = useState<
+    Array<{ cor: string; image: File | null; preview: string }>
+  >([])
+  const [currentColor, setCurrentColor] = useState('')
 
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
   const { data: categories = [] } = useCategories()
 
-  const handleAddVariacao = () => {
-    if (currentVariacao.trim()) {
-      setVariacoes((v) => [...v, currentVariacao.trim()])
-      setCurrentVariacao('')
+  const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setMainImage(file)
+      setMainImagePreview(URL.createObjectURL(file))
     }
   }
 
-  const handleRemoveVariacao = (index: number) => {
-    setVariacoes((all) => all.filter((_, i) => i !== index))
-  }
-
-  async function doUploads(): Promise<string[]> {
-    const urls: string[] = []
-    for (const file of uploadFiles) {
-      const base = 'produtos' // pasta base
-      const folder = subfolder ? `${base}/${subfolder.replace(/^\/|\/$/g, '')}` : base
-      const path = `${folder}/${Date.now()}_${file.name}`
-      const storageRef = ref(storage, path)
-      await uploadBytes(storageRef, file)
-      const url = await getDownloadURL(storageRef)
-      urls.push(url)
+  const handleAddVariation = () => {
+    if (currentColor.trim()) {
+      setVariations([
+        ...variations,
+        { cor: currentColor.trim(), image: null, preview: '' },
+      ])
+      setCurrentColor('')
     }
-    return urls
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleVariationImageChange = (index: number, file: File) => {
+    const newVariations = [...variations]
+    newVariations[index].image = file
+    newVariations[index].preview = URL.createObjectURL(file)
+    setVariations(newVariations)
+  }
+
+  const handleRemoveVariation = (index: number) => {
+    setVariations(variations.filter((_, i) => i !== index))
+  }
+
+  async function uploadOriginal(
+    file: File,
+    pathWithoutExt: string
+  ): Promise<string> {
+    const ext = file.name.split('.').pop() || 'jpg'
+    const storageRef = ref(storage, `${pathWithoutExt}.${ext}`)
+    await uploadBytes(storageRef, file)
+    return getDownloadURL(storageRef)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setMessage('')
-    try {
-      // Recupera subpasta do input hidden gerado no ImageSelector
-      const form = e.currentTarget
-      const hidden = form.querySelector<HTMLInputElement>('input[name="__image_subfolder"]')
-      setSubfolder(hidden?.value || '')
 
-      const uploaded = await doUploads()
-      const imageUrls = [...chosenUrls, ...uploaded]
-      if (imageUrls.length === 0) throw new Error('Selecione ou envie ao menos uma imagem')
+    try {
+      if (!mainImage) throw new Error('Selecione a imagem principal')
+
+      const timestamp = Date.now()
+
+      // 👉 Principal: original + thumb
+      const mainBasePath = `products/${sku}/main/${timestamp}`
+
+      const mainOriginalUrl = await uploadOriginal(
+        mainImage,
+        `${mainBasePath}_orig`
+      )
+
+      const mainThumbUrl = await uploadOptimizedImage(
+        mainImage,
+        `${mainBasePath}_thumb.webp`
+      )
+
+      const variationsData: ProductVariation[] = []
+      const allOriginals: string[] = [mainOriginalUrl]
+      const allThumbs: string[] = [mainThumbUrl]
+
+      for (const variation of variations) {
+        if (!variation.image) continue
+
+        const vTs = Date.now()
+        const basePath = `products/${sku}/variations/${variation.cor}/${vTs}`
+
+        const originalUrl = await uploadOriginal(
+          variation.image,
+          `${basePath}_orig`
+        )
+
+        const thumbUrl = await uploadOptimizedImage(
+          variation.image,
+          `${basePath}_thumb.webp`
+        )
+
+        variationsData.push({
+          cor: variation.cor,
+          imagem_url: originalUrl,
+          thumb_url: thumbUrl,
+        })
+
+        allOriginals.push(originalUrl)
+        allThumbs.push(thumbUrl)
+      }
 
       await setDoc(doc(collection(db, 'produtos'), sku), {
         id: sku,
@@ -70,9 +126,13 @@ export default function ProductForm() {
         descricao,
         categorias: selectedCategories,
         destaque,
-        variacoes,
-        imagens_urls: imageUrls,
-        imagem_url: imageUrls[0],
+        variacoes: variationsData,
+        // imagem principal (detalhe do produto)
+        imagem_url: mainOriginalUrl,
+        thumb_url: mainThumbUrl,
+        // galerias
+        imagens_urls: allOriginals,
+        thumbs_urls: allThumbs,
         createdAt: serverTimestamp(),
       })
 
@@ -82,10 +142,9 @@ export default function ProductForm() {
       setDescricao('')
       setDestaque(false)
       setSelectedCategories([])
-      setVariacoes([])
-      setUploadFiles([])
-      setChosenUrls([])
-      setSubfolder('')
+      setMainImage(null)
+      setMainImagePreview('')
+      setVariations([])
     } catch (err) {
       console.error(err)
       setMessage('Erro ao salvar produto')
@@ -110,7 +169,9 @@ export default function ProductForm() {
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-2">SKU</label>
+            <label className="block text-sm font-semibold mb-2">
+              SKU/Código
+            </label>
             <input
               type="text"
               value={sku}
@@ -146,7 +207,9 @@ export default function ProductForm() {
                     if (e.target.checked) {
                       setSelectedCategories((prev) => [...prev, cat.nome])
                     } else {
-                      setSelectedCategories((prev) => prev.filter((c) => c !== cat.nome))
+                      setSelectedCategories((prev) =>
+                        prev.filter((c) => c !== cat.nome)
+                      )
                     }
                   }}
                   className="rounded"
@@ -158,61 +221,137 @@ export default function ProductForm() {
         </div>
 
         <div>
-          <label className="block text-sm font-semibold mb-2">Variações (cores)</label>
-          <div className="flex gap-2 mb-2">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={destaque}
+              onChange={(e) => setDestaque(e.target.checked)}
+              className="rounded"
+            />
+            <span className="text-sm font-semibold">Produto em destaque</span>
+          </label>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold mb-2">
+            Imagem Principal *
+          </label>
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+            {mainImagePreview ? (
+              <div className="relative aspect-square max-w-xs mx-auto">
+                <img
+                  src={mainImagePreview}
+                  alt="Preview"
+                  className="w-full h-full object-contain"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMainImage(null)
+                    setMainImagePreview('')
+                  }}
+                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center gap-2 cursor-pointer">
+                <Upload className="text-gray-400" size={48} />
+                <span className="text-sm text-gray-600">
+                  Clique para selecionar imagem principal
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleMainImageChange}
+                  className="hidden"
+                  required
+                />
+              </label>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold mb-2">
+            Variações de Cor
+          </label>
+          <div className="flex gap-2 mb-4">
             <input
               type="text"
-              value={currentVariacao}
-              onChange={(e) => setCurrentVariacao(e.target.value)}
+              value={currentColor}
+              onChange={(e) => setCurrentColor(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
-                  handleAddVariacao()
+                  handleAddVariation()
                 }
               }}
+              placeholder="Nome da cor (ex: Vermelho, Preto fosco)"
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary"
-              placeholder="Digite e pressione Enter"
             />
             <button
               type="button"
-              onClick={handleAddVariacao}
+              onClick={handleAddVariation}
               className="bg-primary hover:opacity-90 text-text-primary px-4 py-2 rounded-lg font-semibold"
             >
               Adicionar
             </button>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {variacoes.map((v, i) => (
-              <span key={i} className="bg-gray-100 px-3 py-1 rounded-full text-sm flex items-center gap-2">
-                {v}
+
+          <div className="space-y-3">
+            {variations.map((variation, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+              >
+                <div className="flex-1">
+                  <p className="font-semibold text-sm mb-2">
+                    {variation.cor}
+                  </p>
+                  {variation.preview ? (
+                    <div className="relative w-24 h-24">
+                      <img
+                        src={variation.preview}
+                        alt={variation.cor}
+                        className="w-full h-full object-cover rounded"
+                      />
+                    </div>
+                  ) : (
+                    <label className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded cursor-pointer hover:bg-gray-50">
+                      <Upload size={16} />
+                      <span className="text-xs">Adicionar imagem</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) handleVariationImageChange(index, file)
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
                 <button
                   type="button"
-                  onClick={() => handleRemoveVariacao(i)}
-                  className="text-red-500 hover:text-red-700 font-bold"
+                  onClick={() => handleRemoveVariation(index)}
+                  className="text-red-500 hover:bg-red-50 p-2 rounded"
                 >
-                  ×
+                  <X size={18} />
                 </button>
-              </span>
+              </div>
             ))}
           </div>
-        </div>
-
-        {/* >>> Imagens: upload OU escolher do Storage <<< */}
-        <div className="space-y-2">
-          <label className="block text-sm font-semibold">Imagens</label>
-          <ImageSelector
-            prefix="produtos"
-            uploadBasePath="produtos"
-            multiple
-            onFilesChange={setUploadFiles}
-            onUrlsChange={setChosenUrls}
-          />
         </div>
 
         {message && (
           <p
             className={`text-center font-semibold ${
-              message.includes('sucesso') ? 'text-green-600' : 'text-red-600'
+              message.includes('sucesso')
+                ? 'text-green-600'
+                : 'text-red-600'
             }`}
           >
             {message}

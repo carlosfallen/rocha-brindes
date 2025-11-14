@@ -1,3 +1,4 @@
+// src/components/admin/ProductList.tsx
 import { useState, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -20,7 +21,6 @@ export default function ProductList() {
       orderBy('createdAt', 'desc'),
       limit(pageSize)
     )
-    // se página > 0 e temos cursor daquela página anterior, paginamos
     if (page > 0 && cursors[page - 1]) {
       return fsQuery(
         collection(db, 'produtos'),
@@ -38,7 +38,6 @@ export default function ProductList() {
       const snapshot = await getDocs(qRef)
       const docs = snapshot.docs
       if (docs.length > 0) {
-        // guarda o cursor da página atual (último doc retornado)
         setCursors(prev => {
           const next = [...prev]
           next[page] = docs[docs.length - 1]
@@ -47,7 +46,6 @@ export default function ProductList() {
       }
       return docs.map(d => ({ id: d.id, ...(d.data() as Omit<Product, 'id'>) }))
     },
-    // substitui keepPreviousData
     placeholderData: (prev) => prev ?? [],
     staleTime: 30_000,
   })
@@ -87,6 +85,9 @@ export default function ProductList() {
                   <span key={cat} className="text-xs bg-gray-200 px-2 py-1 rounded">{cat}</span>
                 ))}
               </div>
+              {product.variacoes && product.variacoes.length > 0 && (
+                <p className="text-xs text-gray-500 mt-1">{product.variacoes.length} variações de cor</p>
+              )}
             </div>
             <div className="flex gap-2">
               <button className="p-2 text-blue-600 hover:bg-blue-50 rounded" title="Editar">

@@ -1,4 +1,4 @@
-// src/pages/Home.tsx (atualizado)
+// src/pages/Home.tsx
 import { useState, useMemo } from 'react'
 import { useProducts } from '@/hooks/useProducts'
 import { useCategories } from '@/hooks/useCategories'
@@ -45,30 +45,35 @@ export default function Home() {
               onSearchChange={setSearchTerm}
             />
 
-            <div>
-              {isLoading ? (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[...Array(9)].map((_, i) => (
-                    <div key={i} className="bg-white rounded-xl h-96 animate-pulse" />
-                  ))}
-                </div>
-              ) : filteredProducts.length === 0 ? (
-                <div className="text-center py-20">
-                  <p className="text-xl text-gray-500">Nenhum produto encontrado</p>
-                </div>
-              ) : (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredProducts.map(product => (
-                    <ProductCard
-                      key={product.id}
-                      {...product}
-                      onViewDetails={() => setSelectedProduct(product)}
-                      onAddToCart={() => addToCart(product)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+          <div>
+            {isLoading ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...Array(9)].map((_, i) => (
+                  <div key={i} className="bg-white rounded-xl h-96 animate-pulse" />
+                ))}
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-xl text-gray-500">Nenhum produto encontrado</p>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    id={product.id}
+                    nome={product.nome}
+                    imagem_url={product.imagem_url}
+                    thumb_url={(product as any).thumb_url}
+                    variacoes={product.variacoes}
+                    onViewDetails={() => setSelectedProduct(product)}
+                    onAddToCart={() => addToCart(product)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
           </div>
         </div>
       </main>

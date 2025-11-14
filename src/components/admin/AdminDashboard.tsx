@@ -5,9 +5,10 @@ import { auth } from '@/lib/firebase'
 import ProductForm from '@/components/admin/ProductForm'
 import ProductList from './ProductList'
 import CategoryManager from '@/components/admin/CategoryManager'
+import LayoutManager from '@/components/admin/LayoutManager'
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'products' | 'categories'>('products')
+  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'layout'>('products')
 
   const handleLogout = async () => {
     await signOut(auth)
@@ -49,16 +50,28 @@ export default function AdminDashboard() {
           >
             Categorias
           </button>
+          <button
+            onClick={() => setActiveTab('layout')}
+            className={`px-6 py-2 rounded-lg font-semibold transition-all ${
+              activeTab === 'layout'
+                ? 'bg-primary text-text-primary'
+                : 'bg-white text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            Layout
+          </button>
         </div>
 
-        {activeTab === 'products' ? (
+        {activeTab === 'products' && (
           <div className="space-y-8">
             <ProductForm />
             <ProductList />
           </div>
-        ) : (
-          <CategoryManager />
         )}
+
+        {activeTab === 'categories' && <CategoryManager />}
+
+        {activeTab === 'layout' && <LayoutManager />}
       </div>
     </div>
   )
