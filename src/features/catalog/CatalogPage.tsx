@@ -1,38 +1,25 @@
-// FILE: src/pages/Home.tsx
-import { useMemo, lazy, Suspense, useState, useEffect } from 'react'
-import { useCatalog, setCachedCatalog } from '@/core/hooks/useCatalog'
+// FILE: src/features/catalog/CatalogPage.tsx
+import { useMemo, lazy, Suspense, useState } from 'react'
+import { useCatalog } from '@/core/hooks/useCatalog'
 import { useCart } from '@/core/store/cart'
-import { preloadCriticalImages, optimizeUrl } from '@/shared/utils/image'
 import Header from '@/shared/components/Header'
 import type { Product } from '@/types/product'
 
 const HeroBanner = lazy(() => import('@/shared/components/HeroBanner'))
 const PopularCategories = lazy(() => import('@/shared/components/PopularCategories'))
-const CategorySidebar = lazy(() => import('@/features/catalog/components/CategorySidebar'))
-const ProductGrid = lazy(() => import('@/features/catalog/components/ProductGrid'))
-const ProductModal = lazy(() => import('@/features/catalog/components/ProductModal'))
+const CategorySidebar = lazy(() => import('./components/CategorySidebar'))
+const ProductGrid = lazy(() => import('./components/ProductGrid'))
+const ProductModal = lazy(() => import('./components/ProductModal'))
 const CartSidebar = lazy(() => import('@/features/cart/CartSidebar'))
 
-export default function Home() {
+export default function CatalogPage() {
   const { data, isLoading } = useCatalog()
   const { category, search, add, setCategory, setSearch } = useCart()
   const [selected, setSelected] = useState<Product | null>(null)
 
-  useEffect(() => {
-    if (data) {
-      setCachedCatalog(data)
-      
-      const criticalImages: string[] = []
-      if (data.layout.logo) criticalImages.push(optimizeUrl(data.layout.logo, { width: 257, height: 64, quality: 90 }))
-      if (data.layout.banners[0]?.url) criticalImages.push(optimizeUrl(data.layout.banners[0].url, { width: 1248, height: 390, quality: 85 }))
-      
-      preloadCriticalImages(criticalImages)
-    }
-  }, [data])
-
   const filtered = useMemo(() => {
     if (!data) return []
-    return data.products.filter((p: Product) => {
+    return data.products.filter(p => {
       const matchCat = category === 'Todos' || p.categorias?.includes(category)
       const matchSearch = !search || p.nome.toLowerCase().includes(search.toLowerCase()) || p.id.toLowerCase().includes(search.toLowerCase())
       return matchCat && matchSearch

@@ -1,7 +1,7 @@
 // src/pages/ProductPage.tsx
 import { useParams, Link } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import { db } from '@/core/lib/firebase'
 import { useQuery } from '@tanstack/react-query'
 import type { Product, ProductVariation } from '@/types/product'
 import { ArrowLeft } from 'lucide-react'

@@ -1,9 +1,9 @@
 // src/pages/Admin.tsx
 import { lazy, Suspense } from 'react'
-import { useAuth } from '@/hooks/useAuth'
+import { useAuth } from '@/core/hooks/useAuth'
 
-const AdminDashboard = lazy(() => import('@/components/admin/AdminDashboard'))
-const LoginForm = lazy(() => import('@/components/admin/LoginForm'))
+const AdminDashboard = lazy(() => import('@/features/catalog/components/admin/AdminDashboard'))
+const LoginForm = lazy(() => import('@/features/catalog/components/admin/LoginForm'))
 
 export default function Admin() {
   const { user, loading } = useAuth()

@@ -1,28 +1,35 @@
-<!-- index.html -->
+<!-- FILE: index.html -->
 <!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Rocha Brindes - Catálogo de produtos personalizados para sua empresa" />
+    
+    <!-- DNS Prefetch -->
+    <link rel="dns-prefetch" href="https://firestore.googleapis.com" />
+    <link rel="dns-prefetch" href="https://images.weserv.nl" />
+    <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com" />
+    
+    <!-- Preconnect críticos -->
+    <link rel="preconnect" href="https://images.weserv.nl" crossorigin />
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
+    
     <title>Rocha Brindes - Catálogo de Produtos</title>
     
-    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-    <link rel="preconnect" href="https://images.weserv.nl" crossorigin>
-    <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin>
-    <link rel="dns-prefetch" href="https://firestore.googleapis.com">
-    <link rel="dns-prefetch" href="https://images.weserv.nl">
-    <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com">
-    
     <style>
-      body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
-      #root { min-height: 100vh; }
-      .loading { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+      #root{min-height:100vh;background:#f9fafb}
+      .loading-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#f9fafb;z-index:9999}
+      .loading-spinner{width:48px;height:48px;border:4px solid #e5e7eb;border-top-color:#3b82f6;border-radius:50%;animation:spin 0.8s linear infinite}
+      @keyframes spin{to{transform:rotate(360deg)}}
     </style>
   </head>
   <body>
     <div id="root">
-      <div class="loading">Carregando...</div>
+      <div class="loading-screen">
+        <div class="loading-spinner"></div>
+      </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
