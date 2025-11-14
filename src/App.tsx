@@ -1,8 +1,7 @@
 // src/App.tsx
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const Home = lazy(() => import('./pages/Home'))
 const Admin = lazy(() => import('./pages/Admin'))

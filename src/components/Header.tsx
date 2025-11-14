@@ -1,36 +1,33 @@
 // src/components/Header.tsx
 import { ShoppingCart } from 'lucide-react'
 import { useProductStore } from '@/store/useProductStore'
-import { useEffect, useState } from 'react'
-import { doc, getDoc } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import { useLayoutConfig } from '@/hooks/useLayoutConfig'
+import { optimizeImageUrl } from '@/utils/imageOptimizer'
 
 export default function Header() {
   const { cartCount, toggleCart } = useProductStore()
-  const [logoUrl, setLogoUrl] = useState('/assets/images/logo-rocha-brindes.png')
+  const { data: layout } = useLayoutConfig()
 
-  useEffect(() => {
-    const loadLogo = async () => {
-      try {
-        const docSnap = await getDoc(doc(db, 'config', 'layout'))
-        if (docSnap.exists() && docSnap.data().logo) {
-          setLogoUrl(docSnap.data().logo)
-        }
-      } catch (error) {
-        console.error('Erro ao carregar logo:', error)
-      }
-    }
-    loadLogo()
-  }, [])
+  const rawLogo = layout?.logo || '/assets/images/logo-rocha-brindes.png'
+
+  const optimizedLogo = optimizeImageUrl(rawLogo, {
+    width: 300,
+    quality: 85,
+    format: 'webp',
+  })
 
   return (
     <header className="sticky top-0 z-40 bg-white shadow-sm">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <img
-            src={logoUrl}
+            src={optimizedLogo}
             alt="Rocha Brindes"
+            width={257}
+            height={64}
             className="h-12 md:h-16 w-auto"
+            fetchPriority="high"
+            decoding="async"
           />
         </div>
 

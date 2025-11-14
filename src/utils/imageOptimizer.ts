@@ -1,49 +1,56 @@
 // src/utils/imageOptimizer.ts
-export async function optimizeImage(file: File, maxWidth = 1200, quality = 0.85): Promise<Blob> {
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { storage } from '@/lib/firebase'
+
+const IMAGE_CDN = 'https://images.weserv.nl'
+
+interface ImageOptimizeOptions {
+  width?: number
+  height?: number
+  quality?: number
+  format?: 'webp' | 'jpg' | 'png'
+  fit?: 'contain' | 'cover'
+}
+
+export function optimizeImageUrl(url: string, options: ImageOptimizeOptions = {}): string {
+  if (!url || url.startsWith('blob:')) return url
+
+  const {
+    width,
+    height,
+    quality = 75,
+    format = 'webp',
+    fit = 'contain',
+  } = options
+
+  const params = new URLSearchParams()
+  params.set('url', url)
+  params.set('output', format)
+  params.set('q', quality.toString())
+  params.set('fit', fit)
+  params.set('il', '')
+  
+  if (width) params.set('w', width.toString())
+  if (height) params.set('h', height.toString())
+
+  return `${IMAGE_CDN}/?${params.toString()}`
+}
+
+export function preloadImage(url: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const img = new Image()
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')
-
-    img.onload = () => {
-      let { width, height } = img
-
-      if (width > maxWidth) {
-        height = (height * maxWidth) / width
-        width = maxWidth
-      }
-
-      canvas.width = width
-      canvas.height = height
-
-      ctx?.drawImage(img, 0, 0, width, height)
-
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            resolve(blob)
-          } else {
-            reject(new Error('Failed to optimize image'))
-          }
-        },
-        'image/webp',
-        quality
-      )
-    }
-
-    img.onerror = () => reject(new Error('Failed to load image'))
-    img.src = URL.createObjectURL(file)
+    img.onload = () => resolve()
+    img.onerror = reject
+    img.src = url
   })
 }
 
+export function preloadCriticalImages(urls: string[]): Promise<void[]> {
+  return Promise.all(urls.slice(0, 3).map(preloadImage))
+}
+
 export async function uploadOptimizedImage(file: File, path: string): Promise<string> {
-  const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage')
-  const { storage } = await import('@/lib/firebase')
-  
-  const optimizedBlob = await optimizeImage(file)
-  const optimizedFile = new File([optimizedBlob], `${Date.now()}.webp`, { type: 'image/webp' })
-  
-  const fileRef = ref(storage, path)
-  await uploadBytes(fileRef, optimizedFile)
-  return getDownloadURL(fileRef)
+  const storageRef = ref(storage, path)
+  await uploadBytes(storageRef, file)
+  return getDownloadURL(storageRef)
 }
