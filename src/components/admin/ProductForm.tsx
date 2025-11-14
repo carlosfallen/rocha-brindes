@@ -74,6 +74,7 @@ export default function ProductForm() {
 
     try {
       if (!mainImage) throw new Error('Selecione a imagem principal')
+      if (!sku.trim()) throw new Error('Informe um código/SKU')
 
       const timestamp = Date.now()
 
@@ -127,12 +128,15 @@ export default function ProductForm() {
         categorias: selectedCategories,
         destaque,
         variacoes: variationsData,
-        // imagem principal (detalhe do produto)
+
+        // imagem principal (detalhe)
         imagem_url: mainOriginalUrl,
         thumb_url: mainThumbUrl,
+
         // galerias
         imagens_urls: allOriginals,
         thumbs_urls: allThumbs,
+
         createdAt: serverTimestamp(),
       })
 
@@ -147,7 +151,9 @@ export default function ProductForm() {
       setVariations([])
     } catch (err) {
       console.error(err)
-      setMessage('Erro ao salvar produto')
+      setMessage(
+        err instanceof Error ? err.message : 'Erro ao salvar produto'
+      )
     } finally {
       setLoading(false)
     }
@@ -327,7 +333,8 @@ export default function ProductForm() {
                         accept="image/*"
                         onChange={(e) => {
                           const file = e.target.files?.[0]
-                          if (file) handleVariationImageChange(index, file)
+                          if (file)
+                            handleVariationImageChange(index, file)
                         }}
                         className="hidden"
                       />
